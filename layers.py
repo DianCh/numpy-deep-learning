@@ -7,16 +7,37 @@ def get_tuple(number):
     return tuple(number)
 
 
-def zero_pad_tensor(x, padding, value=0):
-    p_H, p_W = get_tuple(padding)
+def get_output_shape(kernel_size, stride, padding, H_prev, W_prev):
+    k_H, k_W = kernel_size
+    stride_H, stride_W = stride
+    pad_H, pad_W = padding
+
+    H = int((H_prev - k_H + 2 * pad_H) / stride_H) + 1
+    W = int((W_prev - k_W + 2 * pad_W) / stride_W) + 1
+
+    return H, W
+
+
+def const_pad_tensor(x, padding, value=0):
+    pad_H, pad_W = get_tuple(padding)
     x_pad = np.pad(
         x,
-        ((0, 0), (p_H, p_H), (p_W, p_W), (0, 0)),
+        ((0, 0), (pad_H, pad_H), (pad_W, pad_W), (0, 0)),
         mode="constant",
         constant_values=(value, value),
     )
 
     return x_pad
+
+
+def unpad_tensor(x, padding, shape):
+    pad_H, pad_W = padding
+    H, W = shape
+
+    h_start, h_end = (pad_H, -pad_H) if pad_H > 0 else (0, H)
+    w_start, w_end = (pad_W, -pad_W) if pad_W > 0 else (0, W)
+
+    return x[:, h_start:h_end, w_start:w_end, :]
 
 
 class Conv2D:
@@ -44,19 +65,20 @@ class Conv2D:
         m, H_prev, W_prev, _ = x.shape
 
         # determin output dimensions
-        k_H, k_W = self.kernel_size
-        pad_H, pad_W = self.padding
-        stride_H, stride_W = self.stride
-        H = int((H_prev - k_H + 2 * pad_H) / stride_H) + 1
-        W = int((W_prev - k_W + 2 * pad_W) / stride_W) + 1
+        H, W = get_output_shape(
+            self.kernel_size, self.stride, self.padding, H_prev, W_prev
+        )
 
         # initialize container for output
         out = np.zeros((m, H, W, self.out_channels))
 
-        x_pad = zero_pad_tensor(x, self.padding)
-        # (1, k, k, in_channels, out_channels)
-        weights = np.expand_dims(self.weights, axis=0)
+        # pad input tensor
+        x_pad = const_pad_tensor(x, self.padding)
 
+        # (1, k, k, C_prev, C)
+        weights = np.expand_dims(self.weights, axis=0)
+        stride_H, stride_W = self.stride
+        k_H, k_W = self.kernel_size
         for h in range(H):
             # slice boundaries in H direction
             h_start = h * stride_H
@@ -66,9 +88,9 @@ class Conv2D:
                 w_start = w * stride_W
                 w_end = w * stride_W + k_W
 
-                # (m, k, k, in_channels, 1)
+                # (m, k, k, C_prev, 1)
                 x_slice = x_pad[:, h_start:h_end, w_start:w_end, :, np.newaxis]
-                # (m, out_channels)
+                # (m, C)
                 out[:, h, w, :] = (
                     np.sum(weights * x_slice, axis=(1, 2, 3)) + self.biases
                 )
@@ -79,20 +101,20 @@ class Conv2D:
         return out
 
     def backward(self, dY):
-        # clear existing
+        # clear existing gradients
         self.clear_gradients()
 
         assert self.cache is not None, "Cannot backprop without forward first."
         x = self.cache
 
         # retrieve input & output dimensions
-        m, H_prev, W_prev, in_channels = x.shape
+        m, H_prev, W_prev, C_prev = x.shape
         _, H, W, _ = dY.shape
 
         # initialize & pad containers for gradients w.r.t input
-        dX = np.zeros((m, H_prev, W_prev, in_channels))
-        dX_pad = zero_pad_tensor(dX, self.padding)
-        x_pad = zero_pad_tensor(x, self.padding)
+        dX = np.zeros((m, H_prev, W_prev, C_prev))
+        dX_pad = const_pad_tensor(dX, self.padding)
+        x_pad = const_pad_tensor(x, self.padding)
 
         stride_H, stride_W = self.stride
         k_H, k_W = self.kernel_size
@@ -105,25 +127,113 @@ class Conv2D:
                 w_start = w * stride_W
                 w_end = w * stride_W + k_W
 
-                # (m, k, k, in_channels, out_channels)
+                # (m, k, k, C_prev, C)
                 weights = np.repeat(np.expand_dims(self.weights, 0), repeats=m, axis=0)
-                # (m, 1, 1, 1, out_channels)
+                # (m, 1, 1, 1, C)
                 dY_ = np.expand_dims(dY[:, h, w, :], axis=(1, 2, 3))
-                # (m, k, k, in_channels)
+                # (m, k, k, C_prev)
                 dX_pad[:, h_start:h_end, w_start:w_end, :] += np.sum(
                     weights * dY_, axis=4
                 )
 
-                # (m, k, k, in_channels, 1)
+                # (m, k, k, C_prev, 1)
                 x_slice = x_pad[:, h_start:h_end, w_start:w_end, :, np.newaxis]
-                # (k, k, in_channels, out_channels)
+                # (k, k, C_prev, C)
                 self.dW += np.sum(x_slice * dY_, axis=0)
-                # (out_channels, )
+                # (C, )
                 self.db += np.sum(dY_, axis=(0, 1, 2, 3))
 
-        # slice the gradient tensor at original size
-        pad_H, pad_W = self.padding
-        dX = dX_pad[:, pad_H:-pad_H, pad_W:-pad_W, :]
+        # slice the gradient tensor to original size
+        dX = unpad_tensor(dX_pad, self.padding, (H_prev, W_prev))
+
+        # clear cache
+        self.cache = None
+
+        return dX
+
+
+class Pool2D:
+    def __init__(self, kernel_size, stride, padding=(0, 0), mode="max"):
+        self.kernel_size = get_tuple(kernel_size)
+        self.stride = get_tuple(stride)
+        self.padding = get_tuple(padding)
+        self.mode = mode
+
+        self.cache = None
+
+    def forward(self, x):
+        # determine input dimensions
+        m, H_prev, W_prev, C_prev = x.shape
+
+        # determine output dimensions
+        H, W = get_output_shape(
+            self.kernel_size, self.padding, self.stride, H_prev, W_prev
+        )
+
+        # initialize container for output
+        out = np.zeros((m, H, W, C_prev))
+
+        # pad input tensor
+        x_pad = const_pad_tensor(x, self.padding)
+
+        stride_H, stride_W = self.stride
+        k_H, k_W = self.kernel_size
+        for h in range(H):
+            # slice boundaries in H direction
+            h_start = h * stride_H
+            h_end = h * stride_H + k_H
+            for w in range(W):
+                # slice boundaries in W direction
+                w_start = w * stride_W
+                w_end = w * stride_W + k_W
+
+                x_slice = x_pad[:, h_start:h_end, w_start:w_end, :]
+                out[:, h, w, :] = np.max(x_slice, axis=(1, 2))
+
+        # save cache for back-propagation
+        self.cache = x
+
+        return out
+
+    def backward(self, dY):
+        assert self.cache is not None, "Cannot backprop without forward first."
+        x = self.cache
+
+        # retrieve input & output dimensions
+        m, H_prev, W_prev, C_prev = x.shape
+        _, H, W, _ = dY.shape
+
+        # initialize & pad containers for gradients w.r.t input
+        dX = np.zeros((m, H_prev, W_prev, C_prev))
+        dX_pad = const_pad_tensor(dX, self.padding)
+        x_pad = const_pad_tensor(x, self.padding)
+
+        stride_H, stride_W = self.stride
+        k_H, k_W = self.kernel_size
+        for h in range(H):
+            # slice boundaries in H direction
+            h_start = h * stride_H
+            h_end = h * stride_H + k_H
+            for w in range(W):
+                # slice boundaries in W directions
+                w_start = w * stride_W
+                w_end = w * stride_W + k_W
+
+                # (m, k, k, C_prev)
+                x_slice = x_pad[:, h_start:h_end, w_start:w_end, :]
+                # (m, 1, 1, C_prev)
+                dY_ = np.expand_dims(dY[:, h, w, :], axis=(1, 2))
+
+                if self.mode == "max":
+                    mask = x_slice == np.max(x_slice, axis=(1, 2), keepdims=True)
+                    dX_pad[:, h_start:h_end, w_start:w_end, :] += dY_ * mask
+
+                elif self.mode == "avg":
+                    avg_volume = np.ones((m, k_H, k_W, C_prev)) / (k_H * k_W)
+                    dX_pad[:, h_start:h_end, w_start:w_end, :] += dY_ * avg_volume
+
+        # slice the gradient tensor to original size
+        dX = unpad_tensor(dX_pad, self.padding, (H_prev, W_prev))
 
         # clear cache
         self.cache = None
