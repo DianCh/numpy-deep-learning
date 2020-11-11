@@ -272,3 +272,27 @@ class ReLU:
 
         return dX
 
+
+class Sigmoid:
+    def __init__(self):
+        self.cache = None
+
+    def forward(self, x):
+        out = 1 / (1 + np.exp(-x))
+
+        # save cache for back-propagation
+        self.cache = out
+
+        return out
+
+    def backward(self, dY):
+        assert self.cache is not None, "Cannot backprop without forward first."
+        y = self.cache
+
+        dX = dY * y * (1 - y)
+
+        # clear cache
+        self.cache = None
+
+        return dX
+
