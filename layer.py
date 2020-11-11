@@ -344,3 +344,10 @@ class Sigmoid:
 
         return dX
 
+
+class Squeeze2D:
+    def forward(self, x):
+        return x.squeeze()
+
+    def backward(self, dY):
+        return np.expand_dims(dY, axis=(1, 2))
