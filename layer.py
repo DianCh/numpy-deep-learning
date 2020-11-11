@@ -48,8 +48,8 @@ class Conv2D:
         self.stride = get_tuple(stride)
         self.padding = get_tuple(padding)
 
-        self.weights = np.random.randn(*self.kernel_size, in_channels, out_channels)
-        self.biases = np.zeros((out_channels,))
+        self.W = np.random.randn(*self.kernel_size, in_channels, out_channels)
+        self.b = np.zeros((out_channels,))
 
         self.dW = np.zeros((*self.kernel_size, in_channels, out_channels))
         self.db = np.zeros((out_channels,))
@@ -76,7 +76,7 @@ class Conv2D:
         x_pad = const_pad_tensor(x, self.padding)
 
         # (1, k, k, C_prev, C)
-        weights = np.expand_dims(self.weights, axis=0)
+        weights = np.expand_dims(self.W, axis=0)
         stride_H, stride_W = self.stride
         k_H, k_W = self.kernel_size
         for h in range(H):
@@ -91,9 +91,7 @@ class Conv2D:
                 # (m, k, k, C_prev, 1)
                 x_slice = x_pad[:, h_start:h_end, w_start:w_end, :, np.newaxis]
                 # (m, C)
-                out[:, h, w, :] = (
-                    np.sum(weights * x_slice, axis=(1, 2, 3)) + self.biases
-                )
+                out[:, h, w, :] = np.sum(weights * x_slice, axis=(1, 2, 3)) + self.b
 
         # save cache for back-propagation
         self.cache = x
@@ -128,7 +126,7 @@ class Conv2D:
                 w_end = w * stride_W + k_W
 
                 # (m, k, k, C_prev, C)
-                weights = np.repeat(np.expand_dims(self.weights, 0), repeats=m, axis=0)
+                weights = np.repeat(np.expand_dims(self.W, 0), repeats=m, axis=0)
                 # (m, 1, 1, 1, C)
                 dY_ = np.expand_dims(dY[:, h, w, :], axis=(1, 2, 3))
                 # (m, k, k, C_prev)

@@ -2,7 +2,12 @@ import numpy as np
 
 
 class CrossEntropyLoss:
-    def __init__(self):
+    def __init__(self, reduction="mean"):
+        assert reduction in {
+            "sum",
+            "mean",
+        }, "Invalid mode for loss reduction. Only 'sum' and 'mean' are supported."
+        self.reduction = reduction
         self.cache = None
 
     def forward(self, x, y):
@@ -20,6 +25,9 @@ class CrossEntropyLoss:
         prob = prob / np.sum(prob, axis=1, keepdims=True)
 
         loss = -np.sum(y * np.log(prob))
+        if self.reduction == "mean":
+            m, _ = x.shape
+            loss /= m
 
         # save cache for back-propagation
         self.cache = prob, y
@@ -31,6 +39,9 @@ class CrossEntropyLoss:
         prob, y = self.cache
 
         dX = prob - y
+        if self.reduction == "mean":
+            m, _ = prob.shape
+            dX /= m
 
         # clear cache
         self.cache = None
