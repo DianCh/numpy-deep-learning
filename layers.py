@@ -246,6 +246,54 @@ class Pool2D:
         return dX
 
 
+class Linear:
+    def __init__(self, in_features, out_features, bias):
+        self.in_features = in_features
+        self.out_features = out_features
+        self.bias = bias
+
+        self.W = np.random.randn(in_features, out_features)
+        self.b = np.zeros((out_features,))
+
+        self.dW = np.zeros((in_features, out_features))
+        self.db = np.zeros((out_features,))
+
+        self.cache = None
+
+    def clear_gradients(self):
+        self.dW *= 0.0
+        self.db *= 0.0
+
+    def forward(self, x):
+        # support 1-dimensional sample feature for now
+        assert x.ndim == 2, "Only 1-dimensional feature is supported for now."
+
+        # (m, C_prev) x (C_prev, C) + (C, )
+        out = np.dot(x, self.W) + self.b
+
+        # save cache for back-propagation
+        self.cache = x
+
+        return out
+
+    def backward(self, dY):
+        # clear existing gradients
+        self.clear_gradients()
+
+        assert self.cache is not None, "Cannot backprop without forward first."
+        x = self.cache
+
+        self.dW = np.dot(x.T, dY)
+        if self.bias:
+            self.db = np.sum(dY, axis=0)
+
+        dX = np.dot(dY, self.W.T)
+
+        # clear cache
+        self.cache = None
+        return dX
+
+
 class ReLU:
     def __init__(self):
         self.cache = None
