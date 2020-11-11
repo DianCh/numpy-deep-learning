@@ -154,6 +154,11 @@ class Conv2D:
 
 class Pool2D:
     def __init__(self, kernel_size, stride, padding=(0, 0), mode="max"):
+        assert mode in {
+            "max",
+            "avg",
+        }, "Invalid mode for Pool2D. Only 'max' and 'avg' are supported."
+
         self.kernel_size = get_tuple(kernel_size)
         self.stride = get_tuple(stride)
         self.padding = get_tuple(padding)
@@ -239,3 +244,31 @@ class Pool2D:
         self.cache = None
 
         return dX
+
+
+class ReLU:
+    def __init__(self):
+        self.cache = None
+
+    def forward(self, x):
+        # cap negative values to zero
+        mask = x >= 0.0
+        out = x * mask
+
+        # save cache for back-propagation
+        self.cache = mask
+
+        return out
+
+    def backward(self, dY):
+        assert self.cache is not None, "Cannot backprop without forward first."
+        mask = self.cache
+
+        # shut down gradients at negative positions
+        dX = dY * mask
+
+        # clear cache
+        self.cache = None
+
+        return dX
+
