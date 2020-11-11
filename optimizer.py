@@ -2,10 +2,9 @@ import numpy as np
 
 
 class SGD:
-    def __init__(self, model, lr, momentum):
+    def __init__(self, model, lr=0.01):
         self.model = model
         self.lr = lr
-        self.momentum = momentum
 
     def zero_grad(self):
         for layer in self.model.layers:
