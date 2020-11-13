@@ -11,9 +11,7 @@ from utils import to_one_hot
 def run():
     # define model
     in_feature, out_feature = 784, 10
-    hidden = [
-        50,
-    ]
+    hidden = [50, 20]
     net = MultiLayerPerceptron(in_feature, out_feature, hidden)
 
     # define loss
@@ -27,13 +25,16 @@ def run():
     X_train, y_train = X[:num_train], y[:num_train]
     X_test, y_test = X[num_train:], y[num_train:]
     print(
-        f"Loaded {len(X)} examples. {len(X_train)} for training, {len(X_test)} for testing"
+        "Loaded {} examples. {} for training, {} for testing".format(
+            len(X), len(X_train), len(X_test)
+        )
     )
 
     # define training hyper-parameters
     batch_size = 100
     learning_rate = 0.002
-    num_epoch = 5
+    num_epoch = 20
+    stat_every = 20
 
     # define optimizer
     optimizer = SGD(net, lr=learning_rate)
@@ -55,20 +56,18 @@ def run():
 
             # cross-entropy loss
             ce_loss = loss_fn.forward(logits, y_batch_one_hot)
-            # print(loss_fn.cache[0], "lalala")
-            # print(loss_fn.cache[1], "hahaha")
             gradient = loss_fn.backward()
 
             optimizer.step(gradient)
-            # print(gradient)
-            # print(net.layers[0].dW, "ljljljl")
 
             train_acc = np.mean(pred == y_batch)
-            print(
-                f"Epoch {epoch}, Batch {batch}, loss: {ce_loss}, training accuracy: {train_acc:.3f}"
-            )
-            # if batch == 100:
-            #     return
+            if (batch + 1) % stat_every == 0:
+                print(
+                    "Epoch {}, Batch {}, loss: {}, training accuracy: {:.3f}".format(
+                        epoch, batch, ce_loss, train_acc
+                    )
+                )
+
         # run evaluation on test split after each epoch
         logits = net.forward(X_test)
         pred = np.argmax(logits, axis=1)
