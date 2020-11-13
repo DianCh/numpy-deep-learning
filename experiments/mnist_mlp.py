@@ -2,10 +2,10 @@ from math import ceil
 from sklearn.datasets import fetch_openml
 import numpy as np
 
-from model import MultiLayerPerceptron
-from loss import CrossEntropyLoss
-from optimizer import SGD
-from utils import to_one_hot
+from ndl.model import MultiLayerPerceptron
+from ndl.loss import CrossEntropyLoss
+from ndl.optimizer import SGD
+from ndl.utils import to_one_hot
 
 
 def run():
@@ -32,7 +32,7 @@ def run():
 
     # define training hyper-parameters
     batch_size = 100
-    learning_rate = 0.002
+    learning_rate = 0.05
     num_epoch = 20
     stat_every = 20
 

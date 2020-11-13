@@ -1,7 +1,7 @@
 import numpy as np
 
 
-from layer import Conv2D, Linear, ReLU, Pool2D, Squeeze2D
+from ndl.layer import Conv2D, Linear, ReLU, Pool2D, Squeeze2D
 
 
 class MultiLayerPerceptron:
