@@ -17,7 +17,8 @@ class MultiLayerPerceptron:
             self.layers.append(relu)
 
     def forward(self, x):
+        print("hahahaha", x)
         for layer in self.layers:
-            x = layer(x)
-
+            # print("hahahaha", x)
+            x = layer.forward(x)
         return x
