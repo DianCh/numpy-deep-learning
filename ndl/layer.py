@@ -349,3 +349,25 @@ class Squeeze2D:
 
     def backward(self, dY):
         return np.expand_dims(dY, axis=(1, 2))
+
+
+class Flatten:
+    def __init__(self):
+        self.cache = None
+
+    def forward(self, x):
+        shape = x.shape
+
+        # save cache for back-propagation
+        self.cache = shape
+
+        return x.reshape((shape[0], -1))
+
+    def backward(self, dY):
+        assert self.cache is not None, "Cannot backprop without forward first."
+        shape = self.cache
+
+        # clear cache
+        self.cache = None
+
+        return dY.reshape(shape)
