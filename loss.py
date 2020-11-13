@@ -40,6 +40,9 @@ class CrossEntropyLoss:
         prob, y = self.cache
 
         dX = prob - y
+        if self.reduction == "mean":
+            m, _ = prob.shape
+            dX /= m
 
         # clear cache
         self.cache = None
