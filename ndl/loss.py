@@ -21,11 +21,15 @@ class CrossEntropyLoss:
             loss: scalar cross-entropy loss
         """
         # calculate softmax probabilities
-        prob = np.expand_dims(x, axis=1) - np.expand_dims(x, axis=2)
-        prob = np.exp(prob)
-        prob = 1 / np.sum(prob, axis=2)
+        # prob = np.expand_dims(x, axis=1) - np.expand_dims(x, axis=2)
+        # prob = np.exp(prob)
+        # prob = 1 / np.sum(prob, axis=2)
+        x = x - np.max(x, axis=1, keepdims=True)
+        # print(x)
+        prob = np.exp(x)
+        prob = prob / np.sum(prob, axis=1, keepdims=True)
 
-        loss = -np.sum(y * np.log(prob))
+        loss = -np.sum(y * np.log(prob + 1e-8))
         if self.reduction == "mean":
             m, _ = x.shape
             loss /= m

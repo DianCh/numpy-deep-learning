@@ -170,7 +170,7 @@ class Pool2D:
 
         # determine output dimensions
         H, W = get_output_shape(
-            self.kernel_size, self.padding, self.stride, H_prev, W_prev
+            self.kernel_size, self.stride, self.padding, H_prev, W_prev
         )
 
         # initialize container for output
@@ -191,7 +191,10 @@ class Pool2D:
                 w_end = w * stride_W + k_W
 
                 x_slice = x_pad[:, h_start:h_end, w_start:w_end, :]
-                out[:, h, w, :] = np.max(x_slice, axis=(1, 2))
+                if self.mode == "max":
+                    out[:, h, w, :] = np.max(x_slice, axis=(1, 2))
+                if self.mode == "avg":
+                    out[:, h, w, :] = np.mean(x_slice, axis=(1, 2))
 
         # save cache for back-propagation
         self.cache = x
@@ -298,7 +301,7 @@ class ReLU:
 
     def forward(self, x):
         # cap negative values to zero
-        mask = x >= 0.0
+        mask = x > 0.0
         out = x * mask
 
         # save cache for back-propagation
@@ -371,3 +374,11 @@ class Flatten:
         self.cache = None
 
         return dY.reshape(shape)
+
+
+class TestMixin:
+    def print_a_line(self):
+        print(self.a)
+
+    def yell(self):
+        self.lalala()

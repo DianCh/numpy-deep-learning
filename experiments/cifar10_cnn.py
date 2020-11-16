@@ -1,38 +1,54 @@
 from math import ceil
-from sklearn.datasets import fetch_openml
 import numpy as np
+import pickle
+import os
 
-from ndl.model import MultiLayerPerceptron
+from ndl.model import SimpleConvNet
 from ndl.loss import CrossEntropyLoss
 from ndl.optimizer import SGD
 from ndl.utils import to_one_hot
 
 
+def get_data_tensor(data_path):
+    with open(data_path, "rb") as f:
+        data = pickle.load(f, encoding="bytes")
+        imgs = data[b"data"].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
+        imgs = (imgs / 255.0 - 0.5) / 0.5
+        labels = np.array(data[b"labels"]).astype(np.int)
+
+    return imgs, labels
+
+
 def run():
     # define model
-    in_feature, out_feature = 784, 10
-    hidden = [50, 20]
-    net = MultiLayerPerceptron(in_feature, out_feature, hidden)
+    net = SimpleConvNet()
 
     # define loss
     loss_fn = CrossEntropyLoss()
 
     # prepare data
-    X, y = fetch_openml("mnist_784", version=1, return_X_y=True, data_home="data")
-    X /= 255.0
-    y = y.astype(np.int)
-    num_train, num_class = 60000, 10
-    X_train, y_train = X[:num_train], y[:num_train]
-    X_test, y_test = X[num_train:], y[num_train:]
+    num_train, num_class = 50000, 10
+    data_root = "data/cifar10"
+    X_train, y_train = [], []
+    for i in range(1, 6):
+        train_file = os.path.join(data_root, f"data_batch_{i}")
+        imgs, labels = get_data_tensor(train_file)
+        X_train.append(imgs)
+        y_train.append(labels)
+    X_train = np.concatenate(X_train)
+    y_train = np.concatenate(y_train)
+
+    test_file = os.path.join(data_root, "test_batch")
+    X_test, y_test = get_data_tensor(test_file)
     print(
-        "Loaded {} samples. {} for training, {} for testing".format(
-            len(X), len(X_train), len(X_test)
+        "Loaded {} samples for training, {} samples for testing".format(
+            len(X_train), len(X_test)
         )
     )
 
     # define training hyper-parameters
     batch_size = 100
-    learning_rate = 0.0005
+    learning_rate = 0.05
     num_epoch = 20
     stat_every = 20
 

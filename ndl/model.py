@@ -35,19 +35,25 @@ class SimpleConvNet(Sequential):
     def __init__(self):
         self.layers = []
 
-        self.layers.append(Conv2D(3, 32, 3, 1, 1))
-        self.layers.append(Pool2D(2, 2, 0, "max"))
+        self.layers.append(Conv2D(3, 16, 3, 1, 1))
         self.layers.append(ReLU())
+        self.layers.append(Pool2D(2, 2, 0, "avg"))
 
-        self.layers.append(Conv2D(32, 64, 3, 1, 1))
-        self.layers.append(Pool2D(2, 2, 0, "max"))
+        self.layers.append(Conv2D(16, 32, 3, 1, 1))
         self.layers.append(ReLU())
+        self.layers.append(Pool2D(2, 2, 0, "avg"))
 
-        self.layers.append(Conv2D(64, 64, 3, 1, 1))
+        self.layers.append(Conv2D(32, 32, 3, 1, 1))
         self.layers.append(ReLU())
+        self.layers.append(Pool2D(2, 2, 0, "avg"))
 
         self.layers.append(Flatten())
 
-        self.layers.append(Linear(1024, 64, True))
+        self.layers.append(Linear(512, 64, True))
         self.layers.append(ReLU())
-        self.layers.append(Linear(64, 10, True))
+        self.layers.append(Linear(64, 10, False))
+
+    def forward(self, x):
+        for layer in self.layers[:3]:
+            x = layer.forward(x)
+        return x
