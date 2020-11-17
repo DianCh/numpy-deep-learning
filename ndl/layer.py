@@ -406,11 +406,3 @@ class Flatten:
         self.cache = None
 
         return dY.reshape((m, c, h, w)).transpose((0, 2, 3, 1))
-
-
-class TestMixin:
-    def print_a_line(self):
-        print(self.a)
-
-    def yell(self):
-        self.lalala()
