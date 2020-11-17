@@ -359,21 +359,21 @@ class Flatten:
         self.cache = None
 
     def forward(self, x):
-        shape = x.shape
+        m, h, w, c = x.shape
 
         # save cache for back-propagation
-        self.cache = shape
+        self.cache = (m, h, w, c)
 
-        return x.reshape((shape[0], -1))
+        return x.transpose((0, 3, 1, 2)).reshape((m, -1))
 
     def backward(self, dY):
         assert self.cache is not None, "Cannot backprop without forward first."
-        shape = self.cache
+        m, h, w, c = self.cache
 
         # clear cache
         self.cache = None
 
-        return dY.reshape(shape)
+        return dY.reshape((m, c, h, w)).transpose((0, 2, 3, 1))
 
 
 class TestMixin:

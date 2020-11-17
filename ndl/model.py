@@ -13,6 +13,10 @@ class Sequential:
             x = layer.forward(x)
         return x
 
+    def backward(self, dY):
+        for layer in self.layers[::-1]:
+            dY = layer.backward(dY)
+
 
 class MultiLayerPerceptron(Sequential):
     def __init__(self, in_features, out_features, hidden):
@@ -54,6 +58,6 @@ class SimpleConvNet(Sequential):
         self.layers.append(Linear(64, 10, False))
 
     def forward(self, x):
-        for layer in self.layers[:3]:
+        for layer in self.layers[:123]:
             x = layer.forward(x)
         return x

@@ -57,8 +57,9 @@ def run():
             # cross-entropy loss
             ce_loss = loss_fn.forward(logits, y_batch_one_hot)
             gradient = loss_fn.backward()
+            net.backward(gradient)
 
-            optimizer.step(gradient)
+            optimizer.step()
 
             train_acc = np.mean(pred == y_batch)
             if (batch + 1) % stat_every == 0:

@@ -8,6 +8,69 @@ from ndl.loss import CrossEntropyLoss
 from ndl.optimizer import SGD
 from ndl.utils import to_one_hot
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+
+import time
+
+
+class Net(nn.Module):
+    # def __init__(self, ndl_net):
+    #     super(Net, self).__init__()
+    #     self.conv1 = nn.Conv2d(3, 16, 3, 1, 1)
+    #     self.pool1 = nn.MaxPool2d(2, 2)
+    #     self.conv2 = nn.Conv2d(16, 32, 3, 1, 1)
+    #     self.pool2 = nn.MaxPool2d(2, 2)
+    #     self.conv3 = nn.Conv2d(32, 32, 3, 1, 1)
+    #     self.pool3 = nn.MaxPool2d(2, 2)
+    #     self.fc1 = nn.Linear(512, 64)
+    #     self.fc2 = nn.Linear(64, 10)
+
+    #     with torch.no_grad():
+    #         for i, layer in enumerate([self.conv1, self.conv2, self.conv3]):
+    #             self._reset(layer, ndl_net.layers[i * 3])
+    #         self._reset(self.fc1, ndl_net.layers[10], False)
+    #         self._reset(self.fc2, ndl_net.layers[12], False)
+
+    # def _reset(self, layer, ndl_layer, conv=True):
+    #     print(layer.weight.shape, "---", ndl_layer.W.shape)
+    #     if conv:
+    #         layer.weight = nn.Parameter(
+    #             torch.from_numpy(ndl_layer.W.transpose(3, 2, 0, 1))
+    #         )
+    #     else:
+    #         layer.weight = nn.Parameter(torch.from_numpy(ndl_layer.W.transpose()))
+    #     layer.bias = nn.Parameter(torch.from_numpy(ndl_layer.b))
+
+    # def forward(self, x):
+    #     x = self.pool1(F.relu(self.conv1(x)))
+    #     x = self.pool2(F.relu(self.conv2(x)))
+    #     x = self.pool3(F.relu(self.conv3(x)))
+    #     x = x.view(-1, 512)
+    #     x = F.relu(self.fc1(x))
+    #     x = self.fc2(x)
+
+    #     return x
+    def __init__(self):
+        super(Net, self).__init__()
+        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = x.view(-1, 16 * 5 * 5)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
 
 def get_data_tensor(data_path):
     with open(data_path, "rb") as f:
@@ -22,6 +85,7 @@ def get_data_tensor(data_path):
 def run():
     # define model
     net = SimpleConvNet()
+    net_torch = Net().double()
 
     # define loss
     loss_fn = CrossEntropyLoss()
@@ -47,13 +111,15 @@ def run():
     )
 
     # define training hyper-parameters
-    batch_size = 100
-    learning_rate = 0.05
+    batch_size = 8
+    learning_rate = 0.001
     num_epoch = 20
-    stat_every = 20
+    stat_every = 1
 
     # define optimizer
     optimizer = SGD(net, lr=learning_rate)
+    criterion = nn.CrossEntropyLoss()
+    optimizer_torch = optim.SGD(net_torch.parameters(), lr=learning_rate, momentum=0.9)
 
     # start training
     for epoch in range(num_epoch):
@@ -64,6 +130,26 @@ def run():
             X_batch, y_batch = X_train[start:end], y_train[start:end]
             y_batch_one_hot = to_one_hot(y_batch, num_class)
 
+            # optimizer_torch.zero_grad()
+
+            # y_batch = torch.tensor(y_batch)
+            # outputs = net_torch(torch.from_numpy(X_batch.transpose((0, 3, 1, 2))))
+            # loss = criterion(outputs, y_batch)
+            # loss.backward()
+            # optimizer_torch.step()
+
+            # pred = torch.max(outputs, dim=1)
+            # # print(pred.indices)
+            # train_acc = torch.mean((pred.indices == y_batch).float())
+
+            # if (batch + 1) % stat_every == 0:
+            #     print(
+            #         "Epoch {}, Batch {}, loss: {}, training accuracy: {:.3f}".format(
+            #             epoch, batch, loss.detach().numpy(), train_acc
+            #         )
+            #     )
+
+            # return
             optimizer.zero_grad()
 
             # model output
@@ -73,8 +159,9 @@ def run():
             # cross-entropy loss
             ce_loss = loss_fn.forward(logits, y_batch_one_hot)
             gradient = loss_fn.backward()
+            net.backward(gradient)
 
-            optimizer.step(gradient)
+            optimizer.step()
 
             train_acc = np.mean(pred == y_batch)
             if (batch + 1) % stat_every == 0:
@@ -90,6 +177,14 @@ def run():
         val_acc = np.mean(pred == y_test)
         print("-----")
         print(f"Epoch {epoch}, test accuracy: {val_acc:.3f}")
+        # with torch.no_grad():
+        #     outputs = net_torch(torch.from_numpy(X_test.transpose((0, 3, 1, 2))))
+        #     pred = torch.max(outputs, dim=1)
+        #     # print(pred.indices)
+        #     y_test = torch.tensor(y_test)
+        #     test_acc = torch.mean((pred.indices == y_test).float()).numpy()
+        #     print(f"Epoch {epoch}, test accuracy: {test_acc:.3f}")
+        #     time.sleep(1.0)
 
 
 if __name__ == "__main__":

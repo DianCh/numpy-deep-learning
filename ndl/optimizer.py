@@ -11,9 +11,8 @@ class SGD:
             if hasattr(layer, "dW") and hasattr(layer, "db"):
                 layer.clear_gradients()
 
-    def step(self, dY):
-        for layer in self.model.layers[::-1]:
-            dY = layer.backward(dY)
+    def step(self):
+        for layer in self.model.layers:
             if hasattr(layer, "dW") and hasattr(layer, "db"):
                 layer.W -= self.lr * layer.dW
                 layer.b -= self.lr * layer.db
