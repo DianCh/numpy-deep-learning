@@ -40,7 +40,33 @@ def unpad_tensor(x, padding, shape):
     return x[:, h_start:h_end, w_start:w_end, :]
 
 
-class Conv2D:
+def calculate_fan(x):
+    num_input_fmaps, num_output_fmaps = x.shape[-2:]
+    receptive_field_size = 1
+    if x.ndim > 2:
+        receptive_field_size = x[..., 0, 0].size
+    fan_in = num_input_fmaps * receptive_field_size
+    fan_out = num_output_fmaps * receptive_field_size
+
+    return fan_in, fan_out
+
+
+class Module:
+    def kaiming_uniform_init_weights(self, a=0, fan_mode="in"):
+        assert fan_mode in ("in", "out"), "Invalid fan mode."
+        fan_in, fan_out = calculate_fan(self.W)
+        gain = np.sqrt(2.0)
+        std = gain / np.sqrt(fan_in) if fan_mode == "in" else gain / np.sqrt(fan_out)
+        bound = np.sqrt(3.0) * std
+        self.W[:] = np.random.uniform(-bound, bound, self.W.shape)
+
+    def kaiming_uniform_init_biases(self):
+        fan_in, _ = calculate_fan(self.W)
+        bound = 1 / np.sqrt(fan_in)
+        self.b[:] = np.random.uniform(-bound, bound, self.b.shape)
+
+
+class Conv2D(Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride, padding):
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -48,13 +74,16 @@ class Conv2D:
         self.stride = get_tuple(stride)
         self.padding = get_tuple(padding)
 
-        self.W = np.random.randn(*self.kernel_size, in_channels, out_channels)
+        self.W = np.random.randn(*self.kernel_size, in_channels, out_channels) * 0.00001
         self.b = np.zeros((out_channels,))
 
         self.dW = np.zeros((*self.kernel_size, in_channels, out_channels))
         self.db = np.zeros((out_channels,))
 
         self.cache = None
+
+        self.kaiming_uniform_init_weights()
+        self.kaiming_uniform_init_biases()
 
     def clear_gradients(self):
         self.dW *= 0.0
@@ -247,7 +276,7 @@ class Pool2D:
         return dX
 
 
-class Linear:
+class Linear(Module):
     def __init__(self, in_features, out_features, bias):
         self.in_features = in_features
         self.out_features = out_features
@@ -260,6 +289,9 @@ class Linear:
         self.db = np.zeros((out_features,))
 
         self.cache = None
+
+        self.kaiming_uniform_init_weights()
+        self.kaiming_uniform_init_biases()
 
     def clear_gradients(self):
         self.dW *= 0.0

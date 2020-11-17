@@ -17,43 +17,7 @@ import time
 
 
 class Net(nn.Module):
-    # def __init__(self, ndl_net):
-    #     super(Net, self).__init__()
-    #     self.conv1 = nn.Conv2d(3, 16, 3, 1, 1)
-    #     self.pool1 = nn.MaxPool2d(2, 2)
-    #     self.conv2 = nn.Conv2d(16, 32, 3, 1, 1)
-    #     self.pool2 = nn.MaxPool2d(2, 2)
-    #     self.conv3 = nn.Conv2d(32, 32, 3, 1, 1)
-    #     self.pool3 = nn.MaxPool2d(2, 2)
-    #     self.fc1 = nn.Linear(512, 64)
-    #     self.fc2 = nn.Linear(64, 10)
-
-    #     with torch.no_grad():
-    #         for i, layer in enumerate([self.conv1, self.conv2, self.conv3]):
-    #             self._reset(layer, ndl_net.layers[i * 3])
-    #         self._reset(self.fc1, ndl_net.layers[10], False)
-    #         self._reset(self.fc2, ndl_net.layers[12], False)
-
-    # def _reset(self, layer, ndl_layer, conv=True):
-    #     print(layer.weight.shape, "---", ndl_layer.W.shape)
-    #     if conv:
-    #         layer.weight = nn.Parameter(
-    #             torch.from_numpy(ndl_layer.W.transpose(3, 2, 0, 1))
-    #         )
-    #     else:
-    #         layer.weight = nn.Parameter(torch.from_numpy(ndl_layer.W.transpose()))
-    #     layer.bias = nn.Parameter(torch.from_numpy(ndl_layer.b))
-
-    # def forward(self, x):
-    #     x = self.pool1(F.relu(self.conv1(x)))
-    #     x = self.pool2(F.relu(self.conv2(x)))
-    #     x = self.pool3(F.relu(self.conv3(x)))
-    #     x = x.view(-1, 512)
-    #     x = F.relu(self.fc1(x))
-    #     x = self.fc2(x)
-
-    #     return x
-    def __init__(self):
+    def __init__(self, ndl_net):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(3, 6, 5)
         self.pool = nn.MaxPool2d(2, 2)
@@ -61,6 +25,25 @@ class Net(nn.Module):
         self.fc1 = nn.Linear(16 * 5 * 5, 120)
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 10)
+
+        with torch.no_grad():
+            self._reset(self.conv1, ndl_net.layers[0])
+            self._reset(self.conv2, ndl_net.layers[3])
+            self._reset(self.fc1, ndl_net.layers[7], False)
+            self._reset(self.fc2, ndl_net.layers[9], False)
+            self._reset(self.fc3, ndl_net.layers[11], False)
+
+    def _reset(self, layer, ndl_layer, conv=True):
+        print(layer.weight.shape, "---", ndl_layer.W.shape)
+        if conv:
+            layer.weight = nn.Parameter(
+                torch.from_numpy(ndl_layer.W.transpose(3, 2, 0, 1).copy())
+            )
+        else:
+            layer.weight = nn.Parameter(
+                torch.from_numpy(ndl_layer.W.transpose().copy())
+            )
+        layer.bias = nn.Parameter(torch.from_numpy(ndl_layer.b.copy()))
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
@@ -85,7 +68,7 @@ def get_data_tensor(data_path):
 def run():
     # define model
     net = SimpleConvNet()
-    net_torch = Net().double()
+    net_torch = Net(net).double()
 
     # define loss
     loss_fn = CrossEntropyLoss()
@@ -117,7 +100,7 @@ def run():
     stat_every = 1
 
     # define optimizer
-    optimizer = SGD(net, lr=learning_rate)
+    optimizer = SGD(net, lr=learning_rate, momentum=0.9)
     criterion = nn.CrossEntropyLoss()
     optimizer_torch = optim.SGD(net_torch.parameters(), lr=learning_rate, momentum=0.9)
 
@@ -132,22 +115,23 @@ def run():
 
             # optimizer_torch.zero_grad()
 
-            # y_batch = torch.tensor(y_batch)
-            # outputs = net_torch(torch.from_numpy(X_batch.transpose((0, 3, 1, 2))))
-            # loss = criterion(outputs, y_batch)
+            # y_torch = torch.tensor(y_batch)
+            # outputs = net_torch(torch.from_numpy(X_batch.transpose(0, 3, 1, 2)))
+            # loss = criterion(outputs, y_torch)
             # loss.backward()
             # optimizer_torch.step()
 
             # pred = torch.max(outputs, dim=1)
             # # print(pred.indices)
-            # train_acc = torch.mean((pred.indices == y_batch).float())
+            # train_acc = torch.mean((pred.indices == y_torch).float())
 
             # if (batch + 1) % stat_every == 0:
             #     print(
-            #         "Epoch {}, Batch {}, loss: {}, training accuracy: {:.3f}".format(
+            #         "Pytorch Epoch {}, Batch {}, loss: {}, training accuracy: {:.3f}".format(
             #             epoch, batch, loss.detach().numpy(), train_acc
             #         )
             #     )
+            # print(outputs)
 
             # return
             optimizer.zero_grad()
@@ -166,11 +150,12 @@ def run():
             train_acc = np.mean(pred == y_batch)
             if (batch + 1) % stat_every == 0:
                 print(
-                    "Epoch {}, Batch {}, loss: {}, training accuracy: {:.3f}".format(
+                    "NDL Epoch {}, Batch {}, loss: {}, training accuracy: {:.3f}".format(
                         epoch, batch, ce_loss, train_acc
                     )
                 )
-
+            # print(logits)
+            # print("-----")
         # run evaluation on test split after each epoch
         logits = net.forward(X_test)
         pred = np.argmax(logits, axis=1)
