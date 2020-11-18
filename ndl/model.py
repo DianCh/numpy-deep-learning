@@ -39,39 +39,17 @@ class SimpleConvNet(Sequential):
     def __init__(self):
         self.layers = []
 
-        # self.layers.append(Conv2D(3, 16, 3, 1, 1))
-        # self.layers.append(ReLU())
-        # self.layers.append(Pool2D(2, 2, 0, "max"))
-
-        # self.layers.append(Conv2D(16, 32, 3, 1, 1))
-        # self.layers.append(ReLU())
-        # self.layers.append(Pool2D(2, 2, 0, "max"))
-
-        # self.layers.append(Conv2D(32, 32, 3, 1, 1))
-        # self.layers.append(ReLU())
-        # self.layers.append(Pool2D(2, 2, 0, "max"))
-
-        # self.layers.append(Flatten())
-
-        # self.layers.append(Linear(512, 64, True))
-        # self.layers.append(ReLU())
-        # self.layers.append(Linear(64, 10, False))
-        self.layers.append(Conv2D(3, 6, 5, 1, 0))
+        self.layers.append(Conv2D(3, 6, 5))
         self.layers.append(ReLU())
-        self.layers.append(Pool2D(2, 2, 0, "max"))
+        self.layers.append(Pool2D(2, 2))
 
         self.layers.append(Conv2D(6, 16, 5, 1, 0))
         self.layers.append(ReLU())
-        self.layers.append(Pool2D(2, 2, 0, "max"))
+        self.layers.append(Pool2D(2, 2))
 
         self.layers.append(Flatten())
-        self.layers.append(Linear(16 * 5 * 5, 120, True))
+        self.layers.append(Linear(16 * 5 * 5, 120))
         self.layers.append(ReLU())
-        self.layers.append(Linear(120, 84, True))
+        self.layers.append(Linear(120, 84))
         self.layers.append(ReLU())
-        self.layers.append(Linear(84, 10, True))
-
-    def forward(self, x):
-        for layer in self.layers:
-            x = layer.forward(x)
-        return x
+        self.layers.append(Linear(84, 10))

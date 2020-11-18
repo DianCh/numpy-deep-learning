@@ -25,7 +25,6 @@ class CrossEntropyLoss:
         # prob = np.exp(prob)
         # prob = 1 / np.sum(prob, axis=2)
         x = x - np.max(x, axis=1, keepdims=True)
-        # print(x)
         prob = np.exp(x)
         prob = prob / np.sum(prob, axis=1, keepdims=True)
 

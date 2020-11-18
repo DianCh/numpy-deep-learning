@@ -67,7 +67,7 @@ class Module:
 
 
 class Conv2D(Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride, padding):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = get_tuple(kernel_size)
@@ -277,7 +277,7 @@ class Pool2D:
 
 
 class Linear(Module):
-    def __init__(self, in_features, out_features, bias):
+    def __init__(self, in_features, out_features, bias=True):
         self.in_features = in_features
         self.out_features = out_features
         self.bias = bias
