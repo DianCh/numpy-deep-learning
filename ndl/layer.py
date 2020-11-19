@@ -406,3 +406,104 @@ class Flatten:
         self.cache = None
 
         return dY.reshape((m, c, h, w)).transpose((0, 2, 3, 1))
+
+
+class Conv2DThreeFold(Conv2D):
+    def forward(self, x):
+        # determine input dimensions
+        m, H_prev, W_prev, _ = x.shape
+
+        # determin output dimensions
+        H, W = get_output_shape(
+            self.kernel_size, self.stride, self.padding, H_prev, W_prev
+        )
+
+        # initialize container for output
+        out = np.zeros((m, H, W, self.out_channels))
+
+        # pad input tensor
+        x_pad = const_pad_tensor(x, self.padding)
+
+        stride_H, stride_W = self.stride
+        k_H, k_W = self.kernel_size
+        for h in range(H):
+            # slice boundaries in H direction
+            h_start = h * stride_H
+            h_end = h * stride_H + k_H
+            for w in range(W):
+                # slice boundaries in W direction
+                w_start = w * stride_W
+                w_end = w * stride_W + k_W
+
+                # (m, k, k, C_prev)
+                x_slice = x_pad[:, h_start:h_end, w_start:w_end, :]
+                # loop over output channels
+                for c in range(self.out_channels):
+                    out[:, h, w, c] = (
+                        np.sum(self.W[:, :, :, c] * x_slice, axis=(1, 2, 3)) + self.b[c]
+                    )  # (k, k, C_prev) x (m, k, k, C_prev)
+
+        # save cache for back-propagation
+        self.cache = x
+
+        return out
+
+    def backward(self, dY):
+        # clear existing gradients
+        self.clear_gradients()
+
+        assert self.cache is not None, "Cannot backprop without forward first."
+        x = self.cache
+
+        # retrieve input & output dimensions
+        m, H_prev, W_prev, C_prev = x.shape
+        _, H, W, _ = dY.shape
+
+        # initialize & pad containers for gradients w.r.t input
+        dX = np.zeros((m, H_prev, W_prev, C_prev))
+        dX_pad = const_pad_tensor(dX, self.padding)
+        x_pad = const_pad_tensor(x, self.padding)
+
+        stride_H, stride_W = self.stride
+        k_H, k_W = self.kernel_size
+        for h in range(H):
+            # slice boundaries in H direction
+            h_start = h * stride_H
+            h_end = h * stride_H + k_H
+            for w in range(W):
+                # slice boundaries in W directions
+                w_start = w * stride_W
+                w_end = w * stride_W + k_W
+
+                # (m, k, k, C_prev)
+                x_slice = x_pad[:, h_start:h_end, w_start:w_end, :]
+                # loop over output channels
+                for c in range(self.out_channels):
+                    # (m, k, k, C_prev)
+                    weights = np.repeat(self.W[np.newaxis, ..., c], repeats=m, axis=0)
+                    # (m, 1, 1, 1)
+                    dY_ = np.expand_dims(dY[:, h, w, c], axis=(1, 2, 3))
+                    # (m, k, k, C_prev)
+                    dX_pad[:, h_start:h_end, w_start:w_end, :] += weights * dY_
+
+                    # (k, k, C_prev)
+                    self.dW[..., c] += np.sum(x_slice * dY_, axis=0)
+                    # (1, )
+                    self.db[c] += np.sum(dY_)
+
+        # slice the gradient tensor to original size
+        dX = unpad_tensor(dX_pad, self.padding, (H_prev, W_prev))
+
+        # clear cache
+        self.cache = None
+
+        return dX
+
+
+class Conv2DFourFold(Conv2D):
+    def forward(self, x):
+        pass
+
+    def backward(self, dY):
+        pass
+
