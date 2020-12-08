@@ -14,13 +14,20 @@ class Conv2D(Base):
     """Standard 2D Convolution layer."""
 
     def __init__(
-        self, in_channels, out_channels, kernel_size, stride=1, padding=0
+        self,
+        in_channels,
+        out_channels,
+        kernel_size,
+        stride=1,
+        padding=0,
+        use_im2col=False,
     ):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = get_tuple(kernel_size)
         self.stride = get_tuple(stride)
         self.padding = get_tuple(padding)
+        self.use_im2col = use_im2col
 
         self.W = (
             np.random.randn(*self.kernel_size, in_channels, out_channels)
@@ -38,6 +45,9 @@ class Conv2D(Base):
 
     def forward(self, x):
         """Forward computation of convolution."""
+        # save cache for back-propagation
+        self.cache = x
+
         # determine input dimensions
         m, H_prev, W_prev, _ = x.shape
 
@@ -46,11 +56,51 @@ class Conv2D(Base):
             self.kernel_size, self.stride, self.padding, H_prev, W_prev
         )
 
-        # initialize container for output
-        out = np.zeros((m, H, W, self.out_channels))
-
         # pad input tensor
         x_pad = const_pad_tensor(x, self.padding)
+
+        out = (
+            self._forward_im2col(x_pad, m, H, W)
+            if self.use_im2col
+            else self._forward_dot(x_pad, m, H, W)
+        )
+
+        return out
+
+    def _forward_im2col(self, x_pad, m, H, W):
+        # flatten weights into 2D matrix
+        # (k, k, C_prev, C) -> (k x k x C_prev, C) -> (1, k x k x C_prev, C)
+        weights = self.W.reshape((-1, self.out_channels))[np.newaxis, ...]
+
+        # im2col matrix
+        stride_H, stride_W = self.stride
+        k_H, k_W = self.kernel_size
+        col_matrix = np.zeros((m, H * W, k_H * k_W * self.in_channels))
+        for h in range(H):
+            # slice boundaries in H direction
+            h_start = h * stride_H
+            h_end = h * stride_H + k_H
+            for w in range(W):
+                # slice boundaries in W direction
+                w_start = w * stride_W
+                w_end = w * stride_W + k_W
+
+                idx = h * H + w
+                # (m, k, k, C_prev) -> (m, k x k x C_prev)
+                row = x_pad[:, h_start:h_end, w_start:w_end, :].reshape((m, -1))
+                col_matrix[:, idx, :] = row
+
+        # (m, H x W, C) -> (m, H, W, C)
+        out = np.matmul(col_matrix, weights).reshape(
+            (m, H, W, self.out_channels)
+        )
+        out += self.b
+
+        return out
+
+    def _forward_dot(self, x_pad, m, H, W):
+        # initialize container for output
+        out = np.zeros((m, H, W, self.out_channels))
 
         # (1, k, k, C_prev, C)
         weights = np.expand_dims(self.W, axis=0)
@@ -72,9 +122,6 @@ class Conv2D(Base):
                     np.sum(weights * x_slice, axis=(1, 2, 3)) + self.b
                 )
 
-        # save cache for back-propagation
-        self.cache = x
-
         return out
 
     def backward(self, dY):
@@ -84,6 +131,9 @@ class Conv2D(Base):
 
         assert self.cache is not None, "Cannot backprop without forward first."
         x = self.cache
+
+        # clear cache
+        self.cache = None
 
         # retrieve input & output dimensions
         m, H_prev, W_prev, C_prev = x.shape
@@ -126,9 +176,6 @@ class Conv2D(Base):
         # slice the gradient tensor to original size
         dX = unpad_tensor(dX_pad, self.padding, (H_prev, W_prev))
 
-        # clear cache
-        self.cache = None
-
         return dX
 
 
@@ -137,6 +184,9 @@ class Conv2DThreeFold(Conv2D):
 
     def forward(self, x):
         """Forward computation of convolution."""
+        # save cache for back-propagation
+        self.cache = x
+
         # determine input dimensions
         m, H_prev, W_prev, _ = x.shape
 
@@ -171,9 +221,6 @@ class Conv2DThreeFold(Conv2D):
                         + self.b[c]
                     )  # (k, k, C_prev) x (m, k, k, C_prev)
 
-        # save cache for back-propagation
-        self.cache = x
-
         return out
 
     def backward(self, dY):
@@ -183,6 +230,9 @@ class Conv2DThreeFold(Conv2D):
 
         assert self.cache is not None, "Cannot backprop without forward first."
         x = self.cache
+
+        # clear cache
+        self.cache = None
 
         # retrieve input & output dimensions
         m, H_prev, W_prev, C_prev = x.shape
@@ -225,9 +275,6 @@ class Conv2DThreeFold(Conv2D):
         # slice the gradient tensor to original size
         dX = unpad_tensor(dX_pad, self.padding, (H_prev, W_prev))
 
-        # clear cache
-        self.cache = None
-
         return dX
 
 
@@ -236,6 +283,9 @@ class Conv2DFourFold(Conv2D):
 
     def forward(self, x):
         """Forward computation of convolution."""
+        # save cache for back-propagation
+        self.cache = x
+
         # determine input dimensions
         m, H_prev, W_prev, _ = x.shape
 
@@ -272,9 +322,6 @@ class Conv2DFourFold(Conv2D):
                             + self.b[c]
                         )  # (k, k, C_prev) x (k, k, C_prev)
 
-        # save cache for back-propagation
-        self.cache = x
-
         return out
 
     def backward(self, dY):
@@ -284,6 +331,9 @@ class Conv2DFourFold(Conv2D):
 
         assert self.cache is not None, "Cannot backprop without forward first."
         x = self.cache
+
+        # clear cache
+        self.cache = None
 
         # retrieve input & output dimensions
         m, H_prev, W_prev, C_prev = x.shape
@@ -327,7 +377,4 @@ class Conv2DFourFold(Conv2D):
             # slice the gradient tensor to original size
             dX = unpad_tensor(dX_pad, self.padding, (H_prev, W_prev))
 
-            # clear cache
-            self.cache = None
-
-            return dX
+        return dX
