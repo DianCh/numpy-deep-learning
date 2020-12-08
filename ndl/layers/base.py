@@ -4,6 +4,12 @@ from ndl.utils import calculate_fan
 
 
 class Base:
+    """Base class for learnable layers with weights and biases."""
+
+    def clear_gradients(self):
+        self.dW *= 0.0
+        self.db *= 0.0
+
     def kaiming_uniform_init_weights(self, a=0, fan_mode="in"):
         assert fan_mode in ("in", "out"), "Invalid fan mode."
         fan_in, fan_out = calculate_fan(self.W)
