@@ -51,7 +51,7 @@ def calculate_fan(x):
     return fan_in, fan_out
 
 
-class Module:
+class Base:
     def kaiming_uniform_init_weights(self, a=0, fan_mode="in"):
         assert fan_mode in ("in", "out"), "Invalid fan mode."
         fan_in, fan_out = calculate_fan(self.W)
@@ -66,7 +66,7 @@ class Module:
         self.b[:] = np.random.uniform(-bound, bound, self.b.shape)
 
 
-class Conv2D(Module):
+class Conv2D(Base):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0):
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -276,7 +276,7 @@ class Pool2D:
         return dX
 
 
-class Linear(Module):
+class Linear(Base):
     def __init__(self, in_features, out_features, bias=True):
         self.in_features = in_features
         self.out_features = out_features
