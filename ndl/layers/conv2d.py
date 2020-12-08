@@ -133,7 +133,10 @@ class Conv2D(Base):
 
 
 class Conv2DThreeFold(Conv2D):
+    """Standard 2D Convolution layer with 3-folder for loop implementation."""
+
     def forward(self, x):
+        """Forward computation of convolution."""
         # determine input dimensions
         m, H_prev, W_prev, _ = x.shape
 
@@ -174,6 +177,7 @@ class Conv2DThreeFold(Conv2D):
         return out
 
     def backward(self, dY):
+        """Backward computation of gradients."""
         # clear existing gradients
         self.clear_gradients()
 
@@ -228,9 +232,102 @@ class Conv2DThreeFold(Conv2D):
 
 
 class Conv2DFourFold(Conv2D):
+    """Standard 2D Convolution layer with 4-fold for loop implementation."""
+
     def forward(self, x):
-        pass
+        """Forward computation of convolution."""
+        # determine input dimensions
+        m, H_prev, W_prev, _ = x.shape
+
+        # determin output dimensions
+        H, W = get_output_shape(
+            self.kernel_size, self.stride, self.padding, H_prev, W_prev
+        )
+
+        # initialize container for output
+        out = np.zeros((m, H, W, self.out_channels))
+
+        # pad input tensor
+        x_pad = const_pad_tensor(x, self.padding)
+
+        stride_H, stride_W = self.stride
+        k_H, k_W = self.kernel_size
+        # loop over samples
+        for i in range(m):
+            for h in range(H):
+                # slice boundaries in H direction
+                h_start = h * stride_H
+                h_end = h * stride_H + k_H
+                for w in range(W):
+                    # slice boundaries in W direction
+                    w_start = w * stride_W
+                    w_end = w * stride_W + k_W
+
+                    # (k, k, C_prev)
+                    x_slice = x_pad[i, h_start:h_end, w_start:w_end, :]
+                    # loop over output channels
+                    for c in range(self.out_channels):
+                        out[i, h, w, c] = (
+                            np.sum(self.W[:, :, :, c] * x_slice, axis=(1, 2, 3))
+                            + self.b[c]
+                        )  # (k, k, C_prev) x (k, k, C_prev)
+
+        # save cache for back-propagation
+        self.cache = x
+
+        return out
 
     def backward(self, dY):
-        pass
+        """Backward computation of gradients."""
+        # clear existing gradients
+        self.clear_gradients()
 
+        assert self.cache is not None, "Cannot backprop without forward first."
+        x = self.cache
+
+        # retrieve input & output dimensions
+        m, H_prev, W_prev, C_prev = x.shape
+        _, H, W, _ = dY.shape
+
+        # initialize & pad containers for gradients w.r.t input
+        dX = np.zeros((m, H_prev, W_prev, C_prev))
+        dX_pad = const_pad_tensor(dX, self.padding)
+        x_pad = const_pad_tensor(x, self.padding)
+
+        stride_H, stride_W = self.stride
+        k_H, k_W = self.kernel_size
+        # loop over samples
+        for i in range(m):
+            for h in range(H):
+                # slice boundaries in H direction
+                h_start = h * stride_H
+                h_end = h * stride_H + k_H
+                for w in range(W):
+                    # slice boundaries in W directions
+                    w_start = w * stride_W
+                    w_end = w * stride_W + k_W
+
+                    # (k, k, C_prev)
+                    x_slice = x_pad[i, h_start:h_end, w_start:w_end, :]
+                    # loop over output channels
+                    for c in range(self.out_channels):
+                        # (k, k, C_prev)
+                        weights = self.W[..., c]
+
+                        # (k, k, C_prev)
+                        dX_pad[i, h_start:h_end, w_start:w_end, :] += (
+                            weights * dY[i, h, w, c]
+                        )
+
+                        # (k, k, C_prev)
+                        self.dW[..., c] += x_slice * dY[i, h, w, c]
+                        # (1, )
+                        self.db[c] += dY[i, h, w, c]
+
+            # slice the gradient tensor to original size
+            dX = unpad_tensor(dX_pad, self.padding, (H_prev, W_prev))
+
+            # clear cache
+            self.cache = None
+
+            return dX
