@@ -10,6 +10,7 @@ Simply out of personal preference, Pytorch is chosen to be the "ground truth" re
 ## Installation
 Dependency:
 - NumPy >= 1.18
+- scikit-learn >= 0.20.0
 - PyTorch (if you want to see the verification. no need for gpu support.)
 
 Clone the repository and set up python search path:

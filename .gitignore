@@ -128,5 +128,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-layers_test.py
+# data root for this project
 data/
+
+# custom vscode settings
+.vscode/

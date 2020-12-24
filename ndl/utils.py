@@ -1,3 +1,5 @@
+"""Utilities that help manipulate tensors."""
+
 import numpy as np
 
 
@@ -42,6 +44,15 @@ def unpad_tensor(x, padding, shape):
     w_start, w_end = (pad_W, -pad_W) if pad_W > 0 else (0, W)
 
     return x[:, h_start:h_end, w_start:w_end, :]
+
+
+def to_one_hot(y, num_class):
+    """Convert [0, m) ranged labels to one-hot representation."""
+    m = len(y)
+    y_one_hot = np.zeros((m, num_class))
+    y_one_hot[np.arange(m), y.astype(np.int)] = 1
+
+    return y_one_hot
 
 
 def calculate_fan(x):

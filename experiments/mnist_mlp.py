@@ -18,7 +18,9 @@ def run():
     loss_fn = CrossEntropyLoss()
 
     # prepare data
-    X, y = fetch_openml("mnist_784", version=1, return_X_y=True, data_home="data")
+    X, y = fetch_openml(
+        "mnist_784", version=1, return_X_y=True, data_home="data"
+    )
     X /= 255.0
     y = y.astype(np.int)
     num_train, num_class = 60000, 10
