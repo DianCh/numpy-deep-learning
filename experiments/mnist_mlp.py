@@ -1,5 +1,7 @@
+"""Script for Multi-Layer Perceptron experiment."""
 from math import ceil
-from sklearn.datasets import fetch_openml
+import os
+import sys
 import numpy as np
 
 from ndl.model import MultiLayerPerceptron
@@ -8,7 +10,19 @@ from ndl.optimizer import SGD
 from ndl.utils import to_one_hot
 
 
-def run():
+def load_mnist_data(data_root):
+    """Load mnist data files into np arrays."""
+    with open(os.path.join(data_root, "images.npy"), "rb") as fh:
+        X = np.load(fh)
+
+    with open(os.path.join(data_root, "labels.npy"), "rb") as fh:
+        y = np.load(fh)
+
+    return X, y
+
+
+def run(data_root):
+    """Main logic for train & evaluation."""
     # define model
     in_feature, out_feature = 784, 10
     hidden = [50, 20]
@@ -18,9 +32,7 @@ def run():
     loss_fn = CrossEntropyLoss()
 
     # prepare data
-    X, y = fetch_openml(
-        "mnist_784", version=1, return_X_y=True, data_home="data"
-    )
+    X, y = load_mnist_data(data_root)
     X /= 255.0
     y = y.astype(np.int)
     num_train, num_class = 60000, 10
@@ -80,4 +92,4 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    run(sys.argv[1])

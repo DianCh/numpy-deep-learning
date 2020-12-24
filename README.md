@@ -8,24 +8,35 @@ All the forward pass, backward pass, initialization, update, etc., are implement
 Simply out of personal preference, Pytorch is chosen to be the "ground truth" reference to verify the implementation. Also, the interfaces have a similar style with Pytorch.
 
 ## Installation
+
 Dependency:
+
 - NumPy >= 1.18
 - scikit-learn >= 0.20.0
-- PyTorch (if you want to see the verification. no need for gpu support.)
+- PyTorch (if you want to run the verification. cpu version will do; no need for gpu support.)
 
 Clone the repository and set up python search path:
-```
+
+```bash
 git clone https://github.com/DianCh/numpy-deep-learning.git
 export PYTHONPATH=<your-chosen-location>/numpy-deep-learning:$PYTHONPATH
 ```
 
 ## Experiments
-The deep learning components are packaged into `ndl`, while scripts of different experiments are grouped under `experiments`.
+
+The deep learning components are packaged into `ndl`, while scripts of different experiments are grouped under `experiments`. Before running the experiments, please run the following the script to get **MNIST** and **CIFAR10** datasets ready on your local machine:
+
+```bash
+python prepare_data.py
+```
 
 ### Numerical Verification
-### Speed Benchmark
+
 ### Multi-Layer Perceptron
+
 ### Convolutional Neural Network
+
+### Speed Benchmark
 
 
 ## Math Step-by-Step

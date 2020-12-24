@@ -1,7 +1,10 @@
+"""Script for Convolutional Neural Network experiment."""
 from math import ceil
-import numpy as np
 import pickle
 import os
+import sys
+import numpy as np
+
 
 from ndl.model import SimpleConvNet
 from ndl.loss import CrossEntropyLoss
@@ -10,6 +13,7 @@ from ndl.utils import to_one_hot
 
 
 def get_data_tensor(data_path):
+    """Read in one batch of CIFAR10 file."""
     with open(data_path, "rb") as f:
         data = pickle.load(f, encoding="bytes")
         imgs = data[b"data"].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
@@ -19,7 +23,8 @@ def get_data_tensor(data_path):
     return imgs, labels
 
 
-def run():
+def run(data_root):
+    """Main logic for train & evaluation."""
     # define model
     net = SimpleConvNet()
 
@@ -28,7 +33,6 @@ def run():
 
     # prepare data
     num_train, num_class = 50000, 10
-    data_root = "data/cifar10"
     X_train, y_train = [], []
     for i in range(1, 6):
         train_file = os.path.join(data_root, f"data_batch_{i}")
@@ -95,4 +99,4 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    run(sys.argv[1])
