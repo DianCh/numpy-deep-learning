@@ -51,8 +51,8 @@ def get_cifar10(data_root):
 
 
 if __name__ == "__main__":
-    data_root = "data"
-    shutil.rmtree(data_root)
+    data_root = os.getenv("NDL_DATA_ROOT", "data")
+    shutil.rmtree(data_root, ignore_errors=True)
     os.makedirs(data_root, exist_ok=True)
 
     get_mnist(data_root)

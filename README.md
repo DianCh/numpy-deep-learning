@@ -30,9 +30,23 @@ The deep learning components are packaged into `ndl`, while scripts of different
 python prepare_data.py
 ```
 
+Then you should have the follow folders for your data inside this repo:
+
+```bash
+├── data
+│   ├── cifar-10-batches-py
+│   └── mnist-784
+```
+
+If you prefer to put data elsewhere, you can also achieve that by setting `NDL_DATA_ROOT` environment variable.
+
 ### Numerical Verification
 
 ### Multi-Layer Perceptron
+
+In this experiment, we are going to train a Multi-Layer Perceptron to classify hand-written digits from the MNIST dataset.
+
+
 
 ### Convolutional Neural Network
 

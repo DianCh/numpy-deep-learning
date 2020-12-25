@@ -1,16 +1,13 @@
 """Script for Multi-Layer Perceptron experiment."""
-from math import ceil
 import os
 import sys
 import numpy as np
 
 from ndl.model import MultiLayerPerceptron
-from ndl.loss import CrossEntropyLoss
-from ndl.optimizer import SGD
-from ndl.utils import to_one_hot
+from ndl.trainer import MultiClassTrainer
 
 
-def load_mnist_data(data_root):
+def load_mnist_data(data_root, num_train):
     """Load mnist data files into np arrays."""
     with open(os.path.join(data_root, "images.npy"), "rb") as fh:
         X = np.load(fh)
@@ -18,24 +15,8 @@ def load_mnist_data(data_root):
     with open(os.path.join(data_root, "labels.npy"), "rb") as fh:
         y = np.load(fh)
 
-    return X, y
-
-
-def run(data_root):
-    """Main logic for train & evaluation."""
-    # define model
-    in_feature, out_feature = 784, 10
-    hidden = [50, 20]
-    net = MultiLayerPerceptron(in_feature, out_feature, hidden)
-
-    # define loss
-    loss_fn = CrossEntropyLoss()
-
-    # prepare data
-    X, y = load_mnist_data(data_root)
-    X /= 255.0
+    X = (X / 255.0 - 0.5) / 0.5
     y = y.astype(np.int)
-    num_train, num_class = 60000, 10
     X_train, y_train = X[:num_train], y[:num_train]
     X_test, y_test = X[num_train:], y[num_train:]
     print(
@@ -44,52 +25,37 @@ def run(data_root):
         )
     )
 
-    # define training hyper-parameters
-    batch_size = 100
-    learning_rate = 0.0005
-    num_epoch = 20
-    stat_every = 20
+    return {
+        "X_train": X_train,
+        "y_train": y_train,
+        "X_test": X_test,
+        "y_test": y_test,
+    }
 
-    # define optimizer
-    optimizer = SGD(net, lr=learning_rate)
 
-    # start training
-    for epoch in range(num_epoch):
-        for batch in range(ceil(num_train / batch_size)):
-            # slice batch data
-            start = batch * batch_size
-            end = start + batch_size
-            X_batch, y_batch = X_train[start:end], y_train[start:end]
-            y_batch_one_hot = to_one_hot(y_batch, num_class)
+def run(data_root, kwargs):
+    """Main logic for train & evaluation."""
+    # define model
+    in_feature, out_feature = 784, 10
+    hidden = [50, 20]
+    net = MultiLayerPerceptron(in_feature, out_feature, hidden)
 
-            optimizer.zero_grad()
+    # prepare data
+    data = load_mnist_data(data_root, kwargs["num_train"])
 
-            # model output
-            logits = net.forward(X_batch)
-            pred = np.argmax(logits, axis=1)
-
-            # cross-entropy loss
-            ce_loss = loss_fn.forward(logits, y_batch_one_hot)
-            gradient = loss_fn.backward()
-            net.backward(gradient)
-
-            optimizer.step()
-
-            train_acc = np.mean(pred == y_batch)
-            if (batch + 1) % stat_every == 0:
-                print(
-                    "Epoch {}, Batch {}, loss: {}, training accuracy: {:.3f}".format(
-                        epoch, batch, ce_loss, train_acc
-                    )
-                )
-
-        # run evaluation on test split after each epoch
-        logits = net.forward(X_test)
-        pred = np.argmax(logits, axis=1)
-        val_acc = np.mean(pred == y_test)
-        print("-----")
-        print(f"Epoch {epoch}, test accuracy: {val_acc:.3f}")
+    trainer = MultiClassTrainer(net, data, **kwargs)
+    trainer.train()
 
 
 if __name__ == "__main__":
-    run(sys.argv[1])
+    kwargs = {
+        "num_train": 60000,
+        "num_class": 10,
+        "batch_size": 100,
+        "num_epoch": 10,
+        "learning_rate": 0.0005,
+        "momentum": 0.9,
+        "stat_every": 100,
+        "show_curve": True,
+    }
+    run(sys.argv[1], kwargs)

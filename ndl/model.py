@@ -1,7 +1,7 @@
 import numpy as np
 
 
-from ndl.layer import Conv2D, Linear, ReLU, Pool2D, Squeeze2D, Flatten
+from ndl.layers import Conv2D, Linear, ReLU, Pool2D, Squeeze2D, Flatten
 
 
 class Sequential:
