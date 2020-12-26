@@ -20,14 +20,12 @@ class Conv2D(Base):
         kernel_size,
         stride=1,
         padding=0,
-        use_im2col=False,
     ):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = get_tuple(kernel_size)
         self.stride = get_tuple(stride)
         self.padding = get_tuple(padding)
-        self.use_im2col = use_im2col
 
         self.W = (
             np.random.randn(*self.kernel_size, in_channels, out_channels)
@@ -59,15 +57,12 @@ class Conv2D(Base):
         # pad input tensor
         x_pad = const_pad_tensor(x, self.padding)
 
-        out = (
-            self._forward_im2col(x_pad, m, H, W)
-            if self.use_im2col
-            else self._forward_dot(x_pad, m, H, W)
-        )
+        out = self._foward_compute(x_pad, m, H, W)
 
         return out
 
-    def _forward_im2col(self, x_pad, m, H, W):
+    def _foward_compute(self, x_pad, m, H, W):
+        """im2col implementation."""
         # flatten weights into 2D matrix
         # (k, k, C_prev, C) -> (k x k x C_prev, C) -> (1, k x k x C_prev, C)
         weights = self.W.reshape((-1, self.out_channels))[np.newaxis, ...]
@@ -95,32 +90,6 @@ class Conv2D(Base):
             (m, H, W, self.out_channels)
         )
         out += self.b
-
-        return out
-
-    def _forward_dot(self, x_pad, m, H, W):
-        # initialize container for output
-        out = np.zeros((m, H, W, self.out_channels))
-
-        # (1, k, k, C_prev, C)
-        weights = np.expand_dims(self.W, axis=0)
-        stride_H, stride_W = self.stride
-        k_H, k_W = self.kernel_size
-        for h in range(H):
-            # slice boundaries in H direction
-            h_start = h * stride_H
-            h_end = h * stride_H + k_H
-            for w in range(W):
-                # slice boundaries in W direction
-                w_start = w * stride_W
-                w_end = w * stride_W + k_W
-
-                # (m, k, k, C_prev, 1)
-                x_slice = x_pad[:, h_start:h_end, w_start:w_end, :, np.newaxis]
-                # (m, C)
-                out[:, h, w, :] = (
-                    np.sum(weights * x_slice, axis=(1, 2, 3)) + self.b
-                )
 
         return out
 
@@ -181,6 +150,33 @@ class Conv2D(Base):
 
 class Conv2DTwoFold(Conv2D):
     """Standard 2D Convolution layer with 2-fold for loop implementation."""
+
+    def _foward_compute(self, x_pad, m, H, W):
+        """2-fold for loop implementation."""
+        # initialize container for output
+        out = np.zeros((m, H, W, self.out_channels))
+
+        # (1, k, k, C_prev, C)
+        weights = np.expand_dims(self.W, axis=0)
+        stride_H, stride_W = self.stride
+        k_H, k_W = self.kernel_size
+        for h in range(H):
+            # slice boundaries in H direction
+            h_start = h * stride_H
+            h_end = h * stride_H + k_H
+            for w in range(W):
+                # slice boundaries in W direction
+                w_start = w * stride_W
+                w_end = w * stride_W + k_W
+
+                # (m, k, k, C_prev, 1)
+                x_slice = x_pad[:, h_start:h_end, w_start:w_end, :, np.newaxis]
+                # (m, C)
+                out[:, h, w, :] = (
+                    np.sum(weights * x_slice, axis=(1, 2, 3)) + self.b
+                )
+
+        return out
 
 
 class Conv2DThreeFold(Conv2D):

@@ -5,6 +5,7 @@ import numpy as np
 
 from ndl.layers import (
     Conv2D,
+    Conv2DTwoFold,
     Conv2DThreeFold,
     Conv2DFourFold,
     Pool2D,
@@ -42,13 +43,13 @@ def conv2d_benchmark(feature, kwargs, num_iter):
     """Benchmark suites for Conv2D variants."""
     # create Conv2D variants
     conv2d = Conv2D(**kwargs)
-    conv2d_im2col = Conv2D(**kwargs, use_im2col=True)
+    conv2d_twofold = Conv2DTwoFold(**kwargs)
     conv2d_threefold = Conv2DThreeFold(**kwargs)
     conv2d_fourfold = Conv2DFourFold(**kwargs)
 
     targets = [
-        (conv2d, "Conv2D"),
-        (conv2d_im2col, "Conv2D with im2col"),
+        (conv2d, "Conv2D with im2col"),
+        (conv2d_twofold, "Conv2DTwoFold"),
         (conv2d_threefold, "Conv2DThreeFold"),
         (conv2d_fourfold, "Conv2DFourFold"),
     ]
