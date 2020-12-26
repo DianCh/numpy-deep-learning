@@ -53,4 +53,3 @@ class Linear(Base):
         # clear cache
         self.cache = None
         return dX
-

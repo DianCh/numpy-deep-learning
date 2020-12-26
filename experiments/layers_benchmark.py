@@ -131,9 +131,11 @@ if __name__ == "__main__":
     feature = np.random.randn(8, 64, 64, 16)
     gradient = np.random.randn(8, 32, 32, 16)
 
+    print("------")
     print("Benchmarking Max Pool2D...")
     pool2d_benchmark(feature, gradient, pool2d_kwargs, 3)
 
+    print("------")
     print("Benchmarking Avg Pool2D...")
     pool2d_kwargs["mode"] = "avg"
     pool2d_benchmark(feature, gradient, pool2d_kwargs, 3)

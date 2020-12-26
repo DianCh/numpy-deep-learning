@@ -8,7 +8,7 @@ This is a vanilla deep learning framework which is implemented from scrach using
 
 All the forward pass, backward pass, initialization, update, etc., are implemented with numpy matrix operations; no magic wrappers behind whatsoever. It's a good reference for practitioners in this field (might just be me) to review the basics, and also for people who just started to see how the black box (or more precisely, boxes) works under the scene.
 
-Simply out of personal preference, Pytorch is chosen to be the "ground truth" reference to verify the implementation. Also, the interfaces have a similar style with Pytorch.
+Simply out of personal preference, **Pytorch** is chosen to be the "ground truth" reference to verify the implementation. Also, the interfaces have a similar style with Pytorch.
 
 ## Installation
 
@@ -16,7 +16,6 @@ Dependency:
 
 - NumPy >= 1.18.0
 - scikit-learn >= 0.20.0
-- PyTorch (if you want to run the verification. cpu version will do; no need for gpu support.)
 
 Clone the repository and set up python search path:
 
@@ -26,6 +25,21 @@ export PYTHONPATH=<your-chosen-location>/numpy-deep-learning:$PYTHONPATH
 ```
 
 ## Overview
+
+So far, this framework contains implementation of several core layers and a complete suite of tools needed to train & evaluate a network. Specifically, the `ndl` package contains:
+
+- layers (`Linear`, `Conv2D`, `ReLU`, `Pool2D`, etc.)
+- loss funtions (`CrossEntropyLoss`, etc.)
+- optimizers (`SGD` with momentum, etc.)
+- schedulers (`StepLR`, `MultiStepLR`, etc.)
+- trainers (`MultiClassTrainer`, etc.)
+- models (`Sequential`, `MultiLayerPerceptron`, `SimpleConvNet`, etc.)
+- utils for tensor manipulation & data loading, etc.
+
+With down-to-earth, easy-to-read implementation, these components can serve as a referece revealing the core pipeline & mechanism of major deep learning frameworks on the market. What's even cooler, is that these components actually allow you to put together a complete experiment to test out your own ideas! Checkout the **Experiment** section below!
+
+There will be more components to come (I have a list of TODOs). Stay tuned!
+
 
 ## Experiments
 
@@ -43,7 +57,7 @@ Then by default you should have the follow folders for your data inside this rep
 │   └── mnist-784
 ```
 
-If you prefer to put data elsewhere, you can also achieve that by setting `NDL_DATA_ROOT` environment variable.
+If you prefer to put data elsewhere, you can also achieve that by setting `NDL_DATA_ROOT` environment variable. If you are playing with other datasets, you might also want to include the preparing steps here.
 
 (Note: currently this vanilla framework doesn't support accumulating gradients of **multiple forward passes**; only the **last** forward pass will count.)
 
@@ -125,9 +139,13 @@ Accuracy of ship: 0.825
 Accuracy of truck: 0.665
 ```
 
+As a reference, the experiment with the default settings finishes within approx. 15 minutes on my i7 macbook pro.
+
 ### Speed Benchmark
 
-This experiment is for testing out the running speed of some NumPy-implemented layers. Specifically, for `Conv2D` and `Pool2D`, I've used 3 levels of vectorization to implement their forward pass and backward pass, which included 2-layer, 3-layer and 4-layer for-loops (if you don't know what I'm talking about you may go check `ndl.layers.conv2d` and `ndl.layers.pool2d`). I've also included a simulated im2col (an technique for optimizing the speed of 2D convolution, which I found super cool) implementation for `Conv2D`.
+This experiment is for testing out the running speed of some NumPy-implemented layers. Specifically, for `Conv2D` and `Pool2D`, I've used 3 levels of vectorization to implement their forward pass and backward pass, which included 2-layer, 3-layer and 4-layer for-loops (if you don't know what I'm talking about you may go check `ndl.layers.conv2d` and `ndl.layers.pool2d`). 
+
+For 2D convolutional layers, `Conv2D`, `Conv2DTwoFold`, `Conv2DThreeFold` and `Conv2DFourFold` are benchmarked. They are ordered descendingly in terms of level of optimization/vectorization, but feel free to start reading reversely with minimum vectorization if you want to understand the math, and gradually add the juice back. The same is true for `Pool2D`, `Pool2DThreeFold` and `Pool2DFourFold`; both max pooling and average pooling are considered.
 
 Simply run:
 
@@ -137,6 +155,30 @@ python experiments/layers_benchmark.py
 
 Again, as a reference, the output on my macbook looks like:
 
-
+```bash
+Benchmarking Conv2D...
+All variants' forward are consistent.
+All variants' backward are consistent.
+Conv2D with im2col used 0.025 seconds for 3 forward passes, 0.045 seconds for 3 backward passes.
+Conv2DTwoFold used 0.239 seconds for 3 forward passes, 0.496 seconds for 3 backward passes.
+Conv2DThreeFold used 1.281 seconds for 3 forward passes, 3.802 seconds for 3 backward passes.
+Conv2DFourFold used 6.135 seconds for 3 forward passes, 9.988 seconds for 3 backward passes.
+------
+Benchmarking Max Pool2D...
+All variants' forward are consistent.
+All variants' backward are consistent.
+Pool2D used 0.042 seconds for 3 forward passes, 0.107 seconds for 3 backward passes.
+Pool2DThreeFold used 0.322 seconds for 3 forward passes, 1.014 seconds for 3 backward passes.
+Pool2DFourFold used 1.914 seconds for 3 forward passes, 5.590 seconds for 3 backward passes.
+------
+Benchmarking Avg Pool2D...
+All variants' forward are consistent.
+All variants' backward are consistent.
+Pool2D used 0.053 seconds for 3 forward passes, 0.068 seconds for 3 backward passes.
+Pool2DThreeFold used 0.526 seconds for 3 forward passes, 0.777 seconds for 3 backward passes.
+Pool2DFourFold used 3.091 seconds for 3 forward passes, 3.661 seconds for 3 backward passes.
+```
 
 ## License
+
+This repo uses [MIT](LICENSE) license.

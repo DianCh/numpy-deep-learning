@@ -1,36 +1,9 @@
 """Script for Multi-Layer Perceptron experiment."""
-import os
 import sys
-import numpy as np
 
 from ndl.model import MultiLayerPerceptron
 from ndl.trainer import MultiClassTrainer
-
-
-def load_mnist_data(data_root, num_train):
-    """Load MNIST data files into np arrays."""
-    with open(os.path.join(data_root, "images.npy"), "rb") as fh:
-        X = np.load(fh)
-
-    with open(os.path.join(data_root, "labels.npy"), "rb") as fh:
-        y = np.load(fh, allow_pickle=True)
-
-    X = (X / 255.0 - 0.5) / 0.5
-    y = y.astype(np.int)
-    X_train, y_train = X[:num_train], y[:num_train]
-    X_test, y_test = X[num_train:], y[num_train:]
-    print(
-        f"Loaded {len(X)} samples.",
-        f"{len(X_train)} for training,",
-        f"{len(X_test)} for testing",
-    )
-
-    return {
-        "X_train": X_train,
-        "y_train": y_train,
-        "X_test": X_test,
-        "y_test": y_test,
-    }
+from ndl.utils import load_mnist_data
 
 
 def run(data_root, kwargs):

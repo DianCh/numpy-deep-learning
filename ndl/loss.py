@@ -1,12 +1,15 @@
+"""Implements loss funtions."""
 import numpy as np
 
 
 class CrossEntropyLoss:
+    """Cross-Entropy Loss for classification."""
+
     def __init__(self, reduction="mean"):
         assert reduction in {
             "sum",
             "mean",
-        }, "Invalid mode for loss reduction. Only 'sum' and 'mean' are supported."
+        }, "Invalid mode for reduction. Only 'sum' and 'mean' are supported."
         self.reduction = reduction
         self.cache = None
 
@@ -21,9 +24,6 @@ class CrossEntropyLoss:
             loss: scalar cross-entropy loss
         """
         # calculate softmax probabilities
-        # prob = np.expand_dims(x, axis=1) - np.expand_dims(x, axis=2)
-        # prob = np.exp(prob)
-        # prob = 1 / np.sum(prob, axis=2)
         x = x - np.max(x, axis=1, keepdims=True)
         prob = np.exp(x)
         prob = prob / np.sum(prob, axis=1, keepdims=True)
@@ -39,6 +39,7 @@ class CrossEntropyLoss:
         return loss
 
     def backward(self):
+        """Backward computation of gradients."""
         assert self.cache is not None, "Cannot backprop without forward first."
         prob, y = self.cache
 

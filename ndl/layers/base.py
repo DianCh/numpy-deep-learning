@@ -1,3 +1,4 @@
+"""A Base class for learnable layers."""
 import numpy as np
 
 from ndl.utils import calculate_fan
