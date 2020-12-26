@@ -179,6 +179,10 @@ class Conv2D(Base):
         return dX
 
 
+class Conv2DTwoFold(Conv2D):
+    """Standard 2D Convolution layer with 2-fold for loop implementation."""
+
+
 class Conv2DThreeFold(Conv2D):
     """Standard 2D Convolution layer with 3-folder for loop implementation."""
 
@@ -318,8 +322,7 @@ class Conv2DFourFold(Conv2D):
                     # loop over output channels
                     for c in range(self.out_channels):
                         out[i, h, w, c] = (
-                            np.sum(self.W[:, :, :, c] * x_slice, axis=(1, 2, 3))
-                            + self.b[c]
+                            np.sum(self.W[:, :, :, c] * x_slice) + self.b[c]
                         )  # (k, k, C_prev) x (k, k, C_prev)
 
         return out

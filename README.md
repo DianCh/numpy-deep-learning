@@ -14,7 +14,7 @@ Simply out of personal preference, Pytorch is chosen to be the "ground truth" re
 
 Dependency:
 
-- NumPy >= 1.18
+- NumPy >= 1.18.0
 - scikit-learn >= 0.20.0
 - PyTorch (if you want to run the verification. cpu version will do; no need for gpu support.)
 
@@ -42,6 +42,8 @@ Then by default you should have the follow folders for your data inside this rep
 ```
 
 If you prefer to put data elsewhere, you can also achieve that by setting `NDL_DATA_ROOT` environment variable.
+
+(Note: currently this vanilla framework doesn't support accumulating gradients of **multiple forward passes**; only the **last** forward pass will count.)
 
 ### Numerical Verification
 
