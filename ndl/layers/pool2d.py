@@ -28,18 +28,27 @@ class Pool2D:
     def forward(self, x):
         """Forward computation of pooling."""
         # determine input dimensions
-        m, H_prev, W_prev, C_prev = x.shape
+        m, H_prev, W_prev, C = x.shape
 
         # determine output dimensions
         H, W = get_output_shape(
             self.kernel_size, self.stride, self.padding, H_prev, W_prev
         )
 
-        # initialize container for output
-        out = np.zeros((m, H, W, C_prev))
+        # save cache for back-propagation
+        self.cache = x
 
         # pad input tensor
         x_pad = const_pad_tensor(x, self.padding)
+
+        out = self._forward_compute(x_pad, m, H, W, C)
+
+        return out
+
+    def _forward_compute(self, x_pad, m, H, W, C):
+        """2-fold for loop implementation."""
+        # initialize container for output
+        out = np.zeros((m, H, W, C))
 
         stride_H, stride_W = self.stride
         k_H, k_W = self.kernel_size
@@ -57,9 +66,6 @@ class Pool2D:
                     out[:, h, w, :] = np.max(x_slice, axis=(1, 2))
                 if self.mode == "avg":
                     out[:, h, w, :] = np.mean(x_slice, axis=(1, 2))
-
-        # save cache for back-propagation
-        self.cache = x
 
         return out
 

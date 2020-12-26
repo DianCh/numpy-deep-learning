@@ -25,6 +25,8 @@ git clone https://github.com/DianCh/numpy-deep-learning.git
 export PYTHONPATH=<your-chosen-location>/numpy-deep-learning:$PYTHONPATH
 ```
 
+## Overview
+
 ## Experiments
 
 The deep learning components are packaged into `ndl`, while scripts of different experiments are grouped under `experiments`. Before running the experiments, please run the following the script to get **MNIST** and **CIFAR10** datasets ready on your local machine:
@@ -44,8 +46,6 @@ Then by default you should have the follow folders for your data inside this rep
 If you prefer to put data elsewhere, you can also achieve that by setting `NDL_DATA_ROOT` environment variable.
 
 (Note: currently this vanilla framework doesn't support accumulating gradients of **multiple forward passes**; only the **last** forward pass will count.)
-
-### Numerical Verification
 
 ### Multi-Layer Perceptron
 
@@ -109,7 +109,7 @@ With the provided default settings, you can get a plot similar to this (accuracy
 
 ![cnn example metrics](examples/cifar10_cnn_metrics.png "CNN example metrics")
 
-The breakdown accuracy for each class looks like something to:
+The breakdown accuracies for each class looks like something to:
 
 ```bash
 Test accuracy after 10 epochs: 0.667
@@ -137,13 +137,6 @@ python experiments/layers_benchmark.py
 
 Again, as a reference, the output on my macbook looks like:
 
-## Math Step-by-Step
-### Linear
-### Conv2D
-### Initialization
-### Pool2D
-### ReLU
-### CrossEntropyLoss
 
 
 ## License

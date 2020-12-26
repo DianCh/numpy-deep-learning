@@ -16,7 +16,7 @@ class CrossEntropyLoss:
         Args:
             x: (m, c) logits of each class
             y: (m, c) one-hot encoding for C-class labels
-        
+
         Returns:
             loss: scalar cross-entropy loss
         """

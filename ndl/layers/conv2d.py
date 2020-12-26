@@ -148,7 +148,7 @@ class Conv2D(Base):
 
                 idx = h * H + w
                 drow = dcol_matrix[:, idx, :].reshape((m, k_H, k_W, -1))
-                dX_pad[:, h_start:h_end, w_start:w_end, :] = drow
+                dX_pad[:, h_start:h_end, w_start:w_end, :] += drow
 
         # slice the gradient tensor to original size
         dX = unpad_tensor(dX_pad, self.padding, (H_prev, W_prev))
@@ -168,7 +168,7 @@ class Conv2DTwoFold(Conv2D):
 
     def _foward_compute(self, x_pad, m, H, W):
         """2-fold for loop implementation."""
-        # with for loop implementgation, use x_pad
+        # with for loop implementation, use x_pad
         self.cache_input = x_pad
 
         # initialize container for output
@@ -240,6 +240,9 @@ class Conv2DThreeFold(Conv2D):
 
     def _foward_compute(self, x_pad, m, H, W):
         """3-fold for loop implementation."""
+        # with for loop implementation, use x_pad
+        self.cache_input = x_pad
+
         # initialize container for output
         out = np.zeros((m, H, W, self.out_channels))
 
@@ -309,6 +312,9 @@ class Conv2DFourFold(Conv2D):
 
     def _foward_compute(self, x_pad, m, H, W):
         """4-fold for loop implementation."""
+        # with for loop implementation, use x_pad
+        self.cache_input = x_pad
+
         # initialize container for output
         out = np.zeros((m, H, W, self.out_channels))
 
