@@ -49,7 +49,7 @@ class SimpleConvNet(Sequential):
 
         self.layers.append(Conv2D(16, 32, 3, 1, 1))
         self.layers.append(ReLU())
-        self.layers.append(Pool2D(2, 2, 0, "avg"))
+        self.layers.append(Pool2D(2, 2, mode="avg"))
 
         self.layers.append(Flatten())
         self.layers.append(Linear(4 * 4 * 32, 128))

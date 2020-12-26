@@ -112,3 +112,11 @@ class Pool2D:
         self.cache = None
 
         return dX
+
+
+class Pool2DThreeFold(Pool2D):
+    pass
+
+
+class Pool2DFourFold(Pool2D):
+    pass

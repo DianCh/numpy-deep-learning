@@ -8,21 +8,21 @@ from ndl.trainer import MultiClassTrainer
 
 
 def load_mnist_data(data_root, num_train):
-    """Load mnist data files into np arrays."""
+    """Load MNIST data files into np arrays."""
     with open(os.path.join(data_root, "images.npy"), "rb") as fh:
         X = np.load(fh)
 
     with open(os.path.join(data_root, "labels.npy"), "rb") as fh:
-        y = np.load(fh)
+        y = np.load(fh, allow_pickle=True)
 
     X = (X / 255.0 - 0.5) / 0.5
     y = y.astype(np.int)
     X_train, y_train = X[:num_train], y[:num_train]
     X_test, y_test = X[num_train:], y[num_train:]
     print(
-        "Loaded {} samples. {} for training, {} for testing".format(
-            len(X), len(X_train), len(X_test)
-        )
+        f"Loaded {len(X)} samples.",
+        f"{len(X_train)} for training,",
+        f"{len(X_test)} for testing",
     )
 
     return {
@@ -55,7 +55,8 @@ if __name__ == "__main__":
         "num_epoch": 10,
         "learning_rate": 0.0005,
         "momentum": 0.9,
-        "stat_every": 100,
+        "stat_every": 20,
         "show_curve": True,
+        "class_names": [f"digit {i}" for i in range(10)],
     }
     run(sys.argv[1], kwargs)

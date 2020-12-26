@@ -23,8 +23,11 @@ class MultiClassTrainer:
         momentum=0.9,
         stat_every=20,
         show_curve=False,
+        class_names=None,
         **kwargs,
     ):
+        assert class_names is None or len(class_names) == num_class
+
         self.model = model
         self.X_train = data["X_train"]
         self.y_train = data["y_train"]
@@ -36,16 +39,20 @@ class MultiClassTrainer:
         self.shuffle = shuffle
         self.stat_every = stat_every
         self.show_curve = show_curve
+        self.class_names = class_names
 
         self.loss_fn = CrossEntropyLoss()
         self.optimizer = SGD(model, lr=learning_rate, momentum=momentum)
 
+        self.losses = []
+        self.train_accs = []
+        self.val_accs = []
+
     def train(self):
         """Main loop of training."""
         num_batch = ceil(len(self.X_train) / self.batch_size)
-        losses = []
-        train_accs = []
-        val_accs = [self.evaluate()]
+        val_acc, _ = self.evaluate()
+        self.val_accs.append((0, val_acc))
         for epoch in range(self.num_epoch):
             if self.shuffle:
                 idx = np.random.permutation(len(self.X_train))
@@ -79,8 +86,10 @@ class MultiClassTrainer:
                 # evaluate this batch
                 train_acc = np.mean(pred == y_batch)
                 if (batch + 1) % self.stat_every == 0:
-                    losses.append(ce_loss)
-                    train_accs.append(train_acc)
+                    self.losses.append((epoch * num_batch + batch, ce_loss))
+                    self.train_accs.append(
+                        (epoch * num_batch + batch, train_acc)
+                    )
                     print(
                         f"Epoch {epoch},",
                         f"Batch {batch},",
@@ -89,13 +98,16 @@ class MultiClassTrainer:
                     )
 
             # run evaluation on test split after each epoch
-            val_acc = self.evaluate()
-            val_accs.append(val_acc)
+            val_acc, breakdown = self.evaluate()
+            self.val_accs.append(((epoch + 1) * num_batch, val_acc))
             print("-----")
             print(f"Test accuracy after {epoch + 1} epochs: {val_acc:.3f}")
+            for i in range(self.num_class):
+                name = self.class_names[i] if self.class_names else f"class {i}"
+                print(f"Accuracy of {name}: {breakdown[i]:.3f}")
 
         if self.show_curve:
-            self.draw_curves(losses, train_accs, val_accs, num_batch)
+            self.draw_curves()
 
     def evaluate(self):
         """Get accuracy on validation set."""
@@ -103,30 +115,31 @@ class MultiClassTrainer:
         pred = np.argmax(logits, axis=1)
         val_acc = np.mean(pred == self.y_test)
 
-        return val_acc
+        breakdown = []
+        for i in range(self.num_class):
+            idx = self.y_test == i
+            acc_i = np.mean(pred[idx] == self.y_test[idx])
+            breakdown.append(acc_i)
 
-    def draw_curves(self, losses, train_accs, val_accs, num_batch):
+        return val_acc, breakdown
+
+    def draw_curves(self):
         """Draw loss & accuracy curves of train & evaluation."""
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
 
         # loss curve
-        ax1.plot(
-            range(0, self.num_epoch * num_batch, self.stat_every),
-            losses,
-        )
+        ax1.plot(*zip(*self.losses))
         ax1.set_title("Loss Curve")
         ax1.set(xlabel="steps", ylabel="loss")
 
         # accuracy curves
         ax2.plot(
-            range(0, self.num_epoch * num_batch, self.stat_every),
-            train_accs,
+            *zip(*self.train_accs),
             "b",
             label="train",
         )
         ax2.plot(
-            range(0, self.num_epoch * num_batch + 1, num_batch),
-            val_accs,
+            *zip(*self.val_accs),
             "r",
             label="val",
         )

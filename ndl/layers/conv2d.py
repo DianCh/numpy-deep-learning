@@ -31,7 +31,7 @@ class Conv2D(Base):
 
         self.W = (
             np.random.randn(*self.kernel_size, in_channels, out_channels)
-            * 0.00001
+            * 0.001
         )
         self.b = np.zeros((out_channels,))
 
